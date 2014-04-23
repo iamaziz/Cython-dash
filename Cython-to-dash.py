@@ -1,4 +1,4 @@
-import requests, sqlite3, os, urllib, urllib2
+import requests, sqlite3, os, urllib
 from bs4 import BeautifulSoup as bs
 
 
@@ -10,12 +10,12 @@ output = docset_name + '/Contents/Resources/Documents/'
 if not os.path.exists(output): os.makedirs(output)
 
 # add icon
-icon = 'http://upload.wikimedia.org/wikipedia/commons/7/7f/Smile_icon.png'
+icon = 'http://cython.org/logo/cython-logo-C.svg'
 urllib.urlretrieve(icon, docset_name + "/icon.png")
 
 
-def update_db(name, path):
-  typ = 'func'
+def update_db(name, typ, path):
+  
   cur.execute("SELECT rowid FROM searchIndex WHERE path = ?", (path,))
   fetched = cur.fetchone()
   if fetched is None:
@@ -27,19 +27,25 @@ def update_db(name, path):
 
 def add_urls():
  
-  root_url = 'http://docs.cython.org/'
- 
-  # start souping index_page
-  data = requests.get(root_url).text
-  soup = bs(data)
-
-  # collected needed pages and their urls
-  for link in soup.findAll('a'):
-    name = link.text.strip()
-    path = link.get('href')
-    if path is not None and name and not path.startswith('http'):
-        path = 'docs.cython.org/' + path
-        update_db(name, path)
+  pages = {
+    "Guide": "http://docs.cython.org/",
+    "func": "http://docs.cython.org/src/reference/index.html",
+      }
+  # loop through each index page:
+  for p in pages:
+    typ = p
+    # souping each page
+    html = requests.get(pages[p]).text
+    soup = bs(html)
+    for a in soup.findAll('a'):
+      name = a.text.strip()
+      path = a.get('href')
+      if path is not None and not path.startswith('http'):
+        if p == 'Guide':
+          path = 'docs.cython.org/' + path
+        if p == 'func':
+          path = 'docs.cython.org/src/reference/' + path
+        update_db(name, typ, path)
 
 
 def add_infoplist():
@@ -55,6 +61,8 @@ def add_infoplist():
          "    <key>DocSetPlatformFamily</key>" \
          "    <string>{2}</string>" \
          "    <key>isDashDocset</key>" \
+         "    <true/>" \
+         "    <key>isJavaScriptEnabled</key>" \
          "    <true/>" \
          "    <key>dashIndexFilePath</key>" \
          "    <string>{3}</string>" \
@@ -74,6 +82,6 @@ except:
 add_urls()
 add_infoplist()
 
-# # commit and close db
+# commit and close db
 db.commit()
 db.close()
