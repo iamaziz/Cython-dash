@@ -40,7 +40,7 @@ def add_urls():
     for a in soup.findAll('a'):
       name = a.text.strip()
       path = a.get('href')
-      if path is not None and not path.startswith('http'):
+      if path is not None and not path.startswith('http') and not path.startswith('#'):
         if p == 'Guide':
           path = 'docs.cython.org/' + path
         if p == 'func':
